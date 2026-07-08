@@ -11,14 +11,14 @@ import { startCheckin, submitAnswer } from '@/features/daily-checkin/checkin-run
  * acknowledged (FR-020). When the flow finishes, `score`/`done` drive the result screen.
  */
 export function useDailyCheckin() {
-  const { checkin, step, transcript, pendingSafety, score, done, set, reset } =
+  const { checkin, step, transcript, pendingSafety, score, insights, done, set, reset } =
     useDailyCheckinStore();
 
   const begin = useCallback(async () => {
     const patient = await authRepository().getOrCreateLocalIdentity();
     const res = await startCheckin(patient.id, todayLocal());
     if (res.alreadyDone) {
-      set({ checkin: res.checkin, done: true, score: res.score });
+      set({ checkin: res.checkin, done: true, score: res.score, insights: res.insights });
       return;
     }
     set({
@@ -53,7 +53,7 @@ export function useDailyCheckin() {
         return;
       }
       if (res.done) {
-        set({ done: true, score: res.score ?? null });
+        set({ done: true, score: res.score ?? null, insights: res.insights ?? [] });
         return;
       }
       set({
@@ -66,5 +66,5 @@ export function useDailyCheckin() {
 
   const acknowledgeSafety = useCallback(() => set({ pendingSafety: null }), [set]);
 
-  return { checkin, step, transcript, pendingSafety, score, done, send, acknowledgeSafety, reset };
+  return { checkin, step, transcript, pendingSafety, score, insights, done, send, acknowledgeSafety, reset };
 }

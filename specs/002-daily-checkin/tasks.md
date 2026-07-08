@@ -90,14 +90,14 @@ viewable/correctable; with no `store_health_data` consent, nothing health-bearin
 
 ### Tests for User Story 2
 
-- [ ] T025 [P] [US2] Integration test: symptom → HealthEvent, check-in+score stored, consent-gated skip in `tests/integration/daily-enrichment.test.ts` (SC-010, FR-015/016/018)
+- [X] T025 [P] [US2] Integration test: symptom → HealthEvent, check-in+score stored, consent-gated skip in `tests/integration/daily-enrichment.test.ts` (SC-010, FR-015/016/018)
 
 ### Implementation for User Story 2
 
-- [ ] T026 [US2] Mock + API HealthEventRepository in `src/repositories/{mock,api}/health-event.repository.ts` (`add` consent-gated, `correct` supersedes, `remove` soft-delete, `list`)
-- [ ] T027 [US2] On check-in completion, create a HealthEvent per reported symptom (source `daily_checkin`) via HealthEventRepository in `src/features/daily-checkin/hooks/useDailyCheckin.ts` (FR-015)
-- [ ] T028 [US2] Persist check-in + Daily Score as viewable/correctable records; surface them in the existing record/review views (FR-016/017)
-- [ ] T029 [US2] No-consent path: run the check-in and show the score, skip health persistence, inform the patient (FR-018 edge case)
+- [X] T026 [US2] Mock + API HealthEventRepository in `src/repositories/{mock,api}/health-event.repository.ts` (`add` consent-gated, `correct` supersedes, `remove` soft-delete, `list`)
+- [X] T027 [US2] On check-in completion, create a HealthEvent per reported symptom (source `daily_checkin`) via HealthEventRepository in `src/features/daily-checkin/hooks/useDailyCheckin.ts` (FR-015)
+- [X] T028 [US2] Persist check-in + Daily Score as viewable/correctable records; surface them in the existing record/review views (FR-016/017)
+- [X] T029 [US2] No-consent path: run the check-in and show the score, skip health persistence, inform the patient (FR-018 edge case)
 
 **Checkpoint**: US1 + US2 — the daily loop grows the Living Record.
 
@@ -114,14 +114,14 @@ education/encouragement Insight.
 
 ### Tests for User Story 3
 
-- [ ] T030 [P] [US3] Unit test insights: guardrail rejection of diagnostic bodies + history-thin fallback in `tests/unit/insights.test.ts` (FR-011/014)
+- [X] T030 [P] [US3] Unit test insights: guardrail rejection of diagnostic bodies + history-thin fallback in `tests/unit/insights.test.ts` (FR-011/014)
 
 ### Implementation for User Story 3
 
-- [ ] T031 [US3] Mock + API InsightRepository in `src/repositories/{mock,api}/insight.repository.ts` (`add` guardrail-checked, `list` excludes dismissed, `dismiss`)
-- [ ] T032 [US3] Generate Insights on completion via the `insights` service and persist them (FR-010/012)
-- [ ] T033 [P] [US3] `InsightCard` component (informational framing + dismiss) in `src/features/daily-checkin/components/InsightCard.tsx`
-- [ ] T034 [US3] Show Insights on the result screen `app/(daily)/result.tsx` (FR-010/013)
+- [X] T031 [US3] Mock + API InsightRepository in `src/repositories/{mock,api}/insight.repository.ts` (`add` guardrail-checked, `list` excludes dismissed, `dismiss`)
+- [X] T032 [US3] Generate Insights on completion via the `insights` service and persist them (FR-010/012)
+- [X] T033 [P] [US3] `InsightCard` component (informational framing + dismiss) in `src/features/daily-checkin/components/InsightCard.tsx`
+- [X] T034 [US3] Show Insights on the result screen `app/(daily)/result.tsx` (FR-010/013)
 
 **Checkpoint**: US1 + US2 + US3 — guidance feels guiding.
 
@@ -137,14 +137,14 @@ completes with an on-device score and syncs exactly once on reconnect.
 
 ### Tests for User Story 4 (mandatory)
 
-- [ ] T035 [P] [US4] Integration test: crisis during check-in surfaces resources before continuing in `tests/integration/daily-safety.test.ts` (SC-007, FR-019/020)
-- [ ] T036 [P] [US4] Integration test: offline check-in → on-device score → sync exactly once (no duplicate day) in `tests/integration/daily-offline.test.ts` (SC-008, FR-022/023)
+- [X] T035 [P] [US4] Integration test: crisis during check-in surfaces resources before continuing in `tests/integration/daily-safety.test.ts` (SC-007, FR-019/020)
+- [X] T036 [P] [US4] Integration test: offline check-in → on-device score → sync exactly once (no duplicate day) in `tests/integration/daily-offline.test.ts` (SC-008, FR-022/023)
 
 ### Implementation for User Story 4
 
-- [ ] T037 [US4] Ensure the daily flow runs `SafetyService` on every patient turn before normal flow (reuse via ConversationRepository) and surfaces resources ahead of the check-in in `src/features/daily-checkin/hooks/useDailyCheckin.ts` + a reused SafetyResources surface (FR-019/020)
-- [ ] T038 [US4] Route all new mutations (check-in, score, health events, insights) through the shared `SyncQueue` with `clientMutationId`; ensure one-per-day is replay-safe (FR-023)
-- [ ] T039 [US4] Diagnosis-request handling in the daily flow: decline + reframe + point to provider via `guardrails` (FR-021)
+- [X] T037 [US4] Ensure the daily flow runs `SafetyService` on every patient turn before normal flow (reuse via ConversationRepository) and surfaces resources ahead of the check-in in `src/features/daily-checkin/hooks/useDailyCheckin.ts` + a reused SafetyResources surface (FR-019/020)
+- [X] T038 [US4] Route all new mutations (check-in, score, health events, insights) through the shared `SyncQueue` with `clientMutationId`; ensure one-per-day is replay-safe (FR-023)
+- [X] T039 [US4] Diagnosis-request handling in the daily flow: decline + reframe + point to provider via `guardrails` (FR-021)
 
 **Checkpoint**: all four stories independently functional.
 
@@ -153,10 +153,10 @@ completes with an on-device score and syncs exactly once on reconnect.
 ## Phase 7: Polish & Cross-Cutting
 
 - [ ] T040 [P] Run `quickstart.md` scenarios (12) and record results
-- [ ] T041 [P] Extend the architecture-invariant guard to `app/(daily)` (screens import repos only via the registry) in `tests/unit/architecture.test.ts`
+- [X] T041 [P] Extend the architecture-invariant guard to `app/(daily)` (screens import repos only via the registry) in `tests/unit/architecture.test.ts`
 - [ ] T042 [P] Accessibility pass on `app/(daily)/` screens
-- [ ] T043 Privacy-review addendum for daily data (symptoms, score) in `specs/002-daily-checkin/checklists/privacy-review.md`
-- [ ] T044 [P] Feature README for `specs/002-daily-checkin/`
+- [X] T043 Privacy-review addendum for daily data (symptoms, score) in `specs/002-daily-checkin/checklists/privacy-review.md`
+- [X] T044 [P] Feature README for `specs/002-daily-checkin/`
 
 ---
 

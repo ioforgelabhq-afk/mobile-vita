@@ -23,7 +23,7 @@ export interface InsightContext {
 }
 
 function trend(history: number[], score: number): InsightCandidate | null {
-  if (history.length < 2) return null; // needs history (FR-014)
+  if (history.length < 1) return null; // no prior score → first-ever check-in (FR-014)
   const prev = history[history.length - 1];
   const delta = score - prev;
   if (delta >= 8) {
