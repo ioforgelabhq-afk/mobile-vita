@@ -232,6 +232,19 @@ export const Insight = SyncMeta.extend({
 });
 export type Insight = z.infer<typeof Insight>;
 
+/* ------------------------------ Physician ---------------------------- */
+export const Physician = SyncMeta.extend({
+  patientId: zUuid,
+  name: z.string().min(1).max(120),
+  specialty: z.string().nullable().default(null),
+  organization: z.string().nullable().default(null),
+  phone: z.string().nullable().default(null),
+  email: z.string().email().nullable().default(null),
+  notes: z.string().max(1000).nullable().default(null),
+  sharedViaConsent: z.boolean().default(false),
+});
+export type Physician = z.infer<typeof Physician>;
+
 /* ----------------------- Companion response ------------------------- */
 export const CompanionResponse = z.object({
   companionTurn: ConversationTurn,

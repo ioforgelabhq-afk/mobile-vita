@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ScrollView, Text, View } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Screen, Button, Mark } from '@/ui';
 import { EmptyState } from '@/features/living-record/components/EmptyState';
 import { RecordItemCard } from '@/features/living-record/components/RecordItemCard';
@@ -14,6 +15,7 @@ import type { LivingRecordFullExport } from '@/services/living-record-view/types
  * score history (US2), correct/remove from one place (US3), and filter + export (US4).
  */
 export default function LivingRecordScreen() {
+  const router = useRouter();
   const {
     items,
     allItemsEmpty,
@@ -42,6 +44,12 @@ export default function LivingRecordScreen() {
       </View>
       <ScrollView contentContainerClassName="py-2 gap-4">
         <Text className="font-sans text-2xl font-bold text-ink">Tu Registro Vivo</Text>
+
+        <Button
+          label="Preparar resumen para tu médico"
+          variant="outline"
+          onPress={() => router.push('/(briefing)/physicians')}
+        />
 
         {history.length > 0 ? (
           <View className="gap-1">

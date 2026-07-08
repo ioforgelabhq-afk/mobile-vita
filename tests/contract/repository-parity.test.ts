@@ -23,6 +23,8 @@ import {
   ApiHealthEventRepository,
   ApiInsightRepository,
 } from '@/repositories/api/daily.repositories';
+import { MockPhysicianRepository } from '@/repositories/mock/physician.repository';
+import { ApiPhysicianRepository } from '@/repositories/api/physician.repository';
 
 function methods(obj: object): string[] {
   return Object.getOwnPropertyNames(Object.getPrototypeOf(obj))
@@ -45,6 +47,7 @@ describe('Mock ≡ API method parity', () => {
     ['DailyScore', new MockDailyScoreRepository({} as any), new ApiDailyScoreRepository()],
     ['HealthEvent', new MockHealthEventRepository({} as any), new ApiHealthEventRepository()],
     ['Insight', new MockInsightRepository({} as any), new ApiInsightRepository()],
+    ['Physician', new MockPhysicianRepository({} as any), new ApiPhysicianRepository()],
   ])('%s: every contract (API) method exists on the Mock', (_name, mock, api) => {
     // The mock may add private helpers; the guarantee is that it implements at least the
     // full contract surface the API defines (Principle IX). tsc enforces exact type conformance.

@@ -44,9 +44,13 @@ Record, physician briefing.
 ## Spec Kit workflow
 
 Specs live in `specs/`. Features:
-- `specs/001-conversational-onboarding/` — implemented (US1–US4), merged to `main` (PR #1).
-- `specs/002-daily-checkin/` — implemented (US1–US4), PR open (#3). Reuses the 001 foundation.
-- `specs/003-living-record/` — spec + plan done; next: `/speckit-tasks`. Pure read/aggregate
-  feature — no new repositories (reuses LivingRecord/HealthEvent/DailyCheckin/DailyScore repos).
+- `specs/001-conversational-onboarding/` — implemented (US1–US4), merged to `main`.
+- `specs/002-daily-checkin/` — implemented (US1–US4), merged to `main`. Reuses 001's foundation.
+- `specs/003-living-record/` — implemented (US1–US4), merged to `main`. Zero new repositories —
+  pure aggregation over LivingRecord/HealthEvent/DailyCheckin/DailyScore repos.
+- `specs/004-physician-briefing/` — implemented (US1–US4), all four pillars now covered. Adds ONE
+  new repository (`PhysicianRepository`, justified — see plan.md Complexity Tracking); reuses
+  feature 003's aggregation service and the (previously unused) `share_with_physician` consent
+  purpose defined since feature 001.
 
 Use the `speckit-*` skills.

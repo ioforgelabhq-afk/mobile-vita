@@ -14,7 +14,8 @@ export type RepoKey =
   | 'dailyCheckin'
   | 'dailyScore'
   | 'healthEvent'
-  | 'insight';
+  | 'insight'
+  | 'physician';
 
 const DEFAULTS: Record<RepoKey, RepoImpl> = {
   auth: 'mock',
@@ -26,6 +27,7 @@ const DEFAULTS: Record<RepoKey, RepoImpl> = {
   dailyScore: 'mock',
   healthEvent: 'mock',
   insight: 'mock',
+  physician: 'mock',
 };
 
 const overrides: Partial<Record<RepoKey, RepoImpl>> = {};
