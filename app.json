@@ -7,12 +7,17 @@
     "scheme": "vita",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
+    "icon": "./assets/images/icon.png",
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "health.vita.app"
     },
     "android": {
-      "package": "health.vita.app"
+      "package": "health.vita.app",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/images/icon.png",
+        "backgroundColor": "#000000"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -27,7 +32,7 @@
       [
         "expo-splash-screen",
         {
-          "image": "./assets/splash-icon.png",
+          "image": "./assets/images/icon.png",
           "imageWidth": 260,
           "resizeMode": "contain",
           "backgroundColor": "#000000"
