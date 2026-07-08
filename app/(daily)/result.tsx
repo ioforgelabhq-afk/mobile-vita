@@ -2,16 +2,25 @@ import { ScrollView, Text, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Screen, Button, Mark } from '@/ui';
 import { ScoreCard } from '@/features/daily-checkin/components/ScoreCard';
+import { InsightCard } from '@/features/daily-checkin/components/InsightCard';
 import { useDailyCheckinStore } from '@/stores/daily-checkin';
+import { insightRepository } from '@/repositories';
 import { alreadyToday } from '@/features/daily-checkin/content';
+import { uuid } from '@/lib/ids';
 
 /**
- * Daily result (US1): shows today's informational Daily Score. Insights are appended here in US3.
- * Reached after a completed check-in, or directly when the patient already checked in today.
+ * Daily result (US1 + US3): today's informational Daily Score plus ≥1 dismissible, informational
+ * Insight (FR-010/013). Reached after a completed check-in, or directly when already checked in
+ * today.
  */
 export default function ResultScreen() {
   const router = useRouter();
-  const score = useDailyCheckinStore((s) => s.score);
+  const { score, insights, set } = useDailyCheckinStore();
+
+  const dismiss = async (id: string) => {
+    await insightRepository().dismiss(id, uuid());
+    set({ insights: insights.filter((i) => i.id !== id) });
+  };
 
   return (
     <Screen>
@@ -22,6 +31,11 @@ export default function ResultScreen() {
         <Text className="font-sans text-2xl font-bold text-ink">{alreadyToday.title}</Text>
         <Text className="font-sans text-ink-2">{alreadyToday.body}</Text>
         {score ? <ScoreCard score={score} /> : null}
+        {insights
+          .filter((i) => !i.dismissedAt)
+          .map((i) => (
+            <InsightCard key={i.id} insight={i} onDismiss={() => void dismiss(i.id)} />
+          ))}
       </ScrollView>
       <View className="py-4">
         <Button label="Listo" onPress={() => router.replace('/')} />

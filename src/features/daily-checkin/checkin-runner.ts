@@ -2,18 +2,24 @@
  * Daily check-in orchestrator (pure, React-free) — testable in the logic suite and wrapped by the
  * `useDailyCheckin` hook. Safety is screened FIRST on every answer (Principle IV), diagnosis
  * requests are reframed (FR-021), answers are parsed + persisted (consent-gated inside the repo),
- * and on the final step the Daily Score is computed on-device and saved (FR-006/009). Uses the
- * repository registry, so Mock↔API swap needs no changes here (Principle IX).
+ * and on the final step: the Daily Score is computed on-device and saved (FR-006/009), each
+ * reported symptom becomes an attributed Health Event (FR-015), and informational Insights are
+ * generated and persisted (FR-010/012). Uses the repository registry, so Mock↔API swap needs no
+ * changes here (Principle IX).
  */
 import {
   dailyCheckinRepository,
   dailyScoreRepository,
+  healthEventRepository,
+  insightRepository,
 } from '@/repositories';
-import type { DailyCheckin, DailyScore, SafetyEvent } from '@/repositories/contracts/schemas';
+import type { DailyCheckin, DailyScore, Insight, SafetyEvent } from '@/repositories/contracts/schemas';
 import { SafetyEvent as SafetyEventSchema } from '@/repositories/contracts/schemas';
 import { safetyService } from '@/services/safety';
 import { guardrails } from '@/services/guardrails';
 import { computeScore } from '@/services/scoring';
+import { insightsService } from '@/services/insights';
+import { ConsentRequiredError } from '@/repositories/contracts/errors';
 import { uuid, nowIso } from '@/lib/ids';
 import {
   FIRST_DAILY_STEP,
@@ -27,6 +33,7 @@ export interface StartResult {
   checkin: DailyCheckin;
   alreadyDone: boolean;
   score: DailyScore | null;
+  insights: Insight[];
   step: DailyStepId;
   prompt: string;
 }
@@ -39,15 +46,19 @@ export interface SubmitResult {
   prompt?: string;
   done?: boolean;
   score?: DailyScore;
+  insights?: Insight[];
 }
 
 export async function startCheckin(patientId: string, date: string): Promise<StartResult> {
   const checkin = await dailyCheckinRepository().startOrResume(patientId, date);
   if (checkin.completedAt) {
     const score = await dailyScoreRepository().forDate(patientId, date);
-    return { checkin, alreadyDone: true, score, step: FIRST_DAILY_STEP, prompt: dailyPrompt(FIRST_DAILY_STEP) };
+    const insights = score
+      ? (await insightRepository().list(patientId)).filter((i) => i.relatedEntityId === score.id)
+      : [];
+    return { checkin, alreadyDone: true, score, insights, step: FIRST_DAILY_STEP, prompt: dailyPrompt(FIRST_DAILY_STEP) };
   }
-  return { checkin, alreadyDone: false, score: null, step: FIRST_DAILY_STEP, prompt: dailyPrompt(FIRST_DAILY_STEP) };
+  return { checkin, alreadyDone: false, score: null, insights: [], step: FIRST_DAILY_STEP, prompt: dailyPrompt(FIRST_DAILY_STEP) };
 }
 
 export async function submitAnswer(
@@ -105,5 +116,41 @@ export async function submitAnswer(
     uuid(),
   );
   const completed = await dailyCheckinRepository().complete(fresh.id, score.id, uuid());
-  return { checkin: completed, done: true, score };
+
+  // 5 — Each reported symptom becomes an attributed Health Event (FR-015). Consent-gated inside
+  // the repo (fail-closed); if declined, symptoms were already dropped by `update` so this is a
+  // no-op, but we guard defensively against a race.
+  for (const symptom of fresh.symptoms) {
+    try {
+      await healthEventRepository().add(
+        {
+          patientId: fresh.patientId,
+          type: 'symptom',
+          title: symptom,
+          occurredAt: score.computedAt,
+          relatedConversationId: fresh.conversationId,
+          source: 'daily_checkin',
+        },
+        uuid(),
+      );
+    } catch (err) {
+      if (!(err instanceof ConsentRequiredError)) throw err;
+    }
+  }
+
+  // 6 — Generate informational Insights from the score + recent history (FR-010/011/014).
+  const history = (await dailyScoreRepository().list(fresh.patientId))
+    .filter((s) => s.date < fresh.date)
+    .map((s) => s.score);
+  const candidates = insightsService.generate({ band: score.band, score: score.score, history });
+  const insights: Insight[] = [];
+  for (const c of candidates) {
+    const insight = await insightRepository().add(
+      { patientId: fresh.patientId, title: c.title, body: c.body, category: c.category, relatedEntityType: 'daily_score', relatedEntityId: score.id },
+      uuid(),
+    );
+    insights.push(insight);
+  }
+
+  return { checkin: completed, done: true, score, insights };
 }

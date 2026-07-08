@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { DailyCheckin, DailyScore, SafetyEvent } from '@/repositories/contracts/schemas';
+import type { DailyCheckin, DailyScore, Insight, SafetyEvent } from '@/repositories/contracts/schemas';
 import type { DailyStepId } from '@/features/daily-checkin/flow/engine';
 
 /** Lightweight transcript message for the daily check-in UI (durable turn storage deferred). */
@@ -20,6 +20,7 @@ interface DailyCheckinState {
   transcript: DailyMsg[];
   pendingSafety: SafetyEvent | null;
   score: DailyScore | null;
+  insights: Insight[];
   done: boolean;
 
   set: (partial: Partial<DailyCheckinState>) => void;
@@ -32,6 +33,7 @@ const initial = {
   transcript: [] as DailyMsg[],
   pendingSafety: null,
   score: null,
+  insights: [] as Insight[],
   done: false,
 };
 
