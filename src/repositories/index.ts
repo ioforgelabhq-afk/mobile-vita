@@ -12,6 +12,10 @@ import type { PatientRepository } from '@/repositories/contracts/patient.reposit
 import type { ConversationRepository } from '@/repositories/contracts/conversation.repository';
 import type { LivingRecordRepository } from '@/repositories/contracts/living-record.repository';
 import type { ConsentRepository } from '@/repositories/contracts/consent.repository';
+import type { DailyCheckinRepository } from '@/repositories/contracts/daily-checkin.repository';
+import type { DailyScoreRepository } from '@/repositories/contracts/daily-score.repository';
+import type { HealthEventRepository } from '@/repositories/contracts/health-event.repository';
+import type { InsightRepository } from '@/repositories/contracts/insight.repository';
 
 import { MockAuthRepository } from '@/repositories/mock/auth.repository';
 import { MockPatientRepository } from '@/repositories/mock/patient.repository';
@@ -25,6 +29,16 @@ import { ApiPatientRepository } from '@/repositories/api/patient.repository';
 import { ApiConversationRepository } from '@/repositories/api/conversation.repository';
 import { ApiLivingRecordRepository } from '@/repositories/api/living-record.repository';
 import { ApiConsentRepository } from '@/repositories/api/consent.repository';
+import { MockDailyCheckinRepository } from '@/repositories/mock/daily-checkin.repository';
+import { MockDailyScoreRepository } from '@/repositories/mock/daily-score.repository';
+import { MockHealthEventRepository } from '@/repositories/mock/health-event.repository';
+import { MockInsightRepository } from '@/repositories/mock/insight.repository';
+import {
+  ApiDailyCheckinRepository,
+  ApiDailyScoreRepository,
+  ApiHealthEventRepository,
+  ApiInsightRepository,
+} from '@/repositories/api/daily.repositories';
 
 import { setConsentChecker } from '@/services/consent-gate';
 
@@ -46,6 +60,16 @@ const apiLivingRecord = new ApiLivingRecordRepository();
 const apiConversation = new ApiConversationRepository();
 const apiConsent = new ApiConsentRepository();
 
+const mockDailyCheckin = new MockDailyCheckinRepository(stores.dailyCheckins);
+const mockDailyScore = new MockDailyScoreRepository(stores.dailyScores);
+const mockHealthEvent = new MockHealthEventRepository(stores.healthEvents);
+const mockInsight = new MockInsightRepository(stores.insights);
+
+const apiDailyCheckin = new ApiDailyCheckinRepository();
+const apiDailyScore = new ApiDailyScoreRepository();
+const apiHealthEvent = new ApiHealthEventRepository();
+const apiInsight = new ApiInsightRepository();
+
 export function authRepository(): AuthRepository {
   return getFlag('auth') === 'api' ? apiAuth : mockAuth;
 }
@@ -60,6 +84,18 @@ export function livingRecordRepository(): LivingRecordRepository {
 }
 export function consentRepository(): ConsentRepository {
   return getFlag('consent') === 'api' ? apiConsent : mockConsent;
+}
+export function dailyCheckinRepository(): DailyCheckinRepository {
+  return getFlag('dailyCheckin') === 'api' ? apiDailyCheckin : mockDailyCheckin;
+}
+export function dailyScoreRepository(): DailyScoreRepository {
+  return getFlag('dailyScore') === 'api' ? apiDailyScore : mockDailyScore;
+}
+export function healthEventRepository(): HealthEventRepository {
+  return getFlag('healthEvent') === 'api' ? apiHealthEvent : mockHealthEvent;
+}
+export function insightRepository(): InsightRepository {
+  return getFlag('insight') === 'api' ? apiInsight : mockInsight;
 }
 
 // Wire the fail-closed consent gate to the active ConsentRepository (US2). Until a record is

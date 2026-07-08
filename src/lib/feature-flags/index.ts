@@ -10,7 +10,11 @@ export type RepoKey =
   | 'patient'
   | 'conversation'
   | 'livingRecord'
-  | 'consent';
+  | 'consent'
+  | 'dailyCheckin'
+  | 'dailyScore'
+  | 'healthEvent'
+  | 'insight';
 
 const DEFAULTS: Record<RepoKey, RepoImpl> = {
   auth: 'mock',
@@ -18,6 +22,10 @@ const DEFAULTS: Record<RepoKey, RepoImpl> = {
   conversation: 'mock',
   livingRecord: 'mock',
   consent: 'mock',
+  dailyCheckin: 'mock',
+  dailyScore: 'mock',
+  healthEvent: 'mock',
+  insight: 'mock',
 };
 
 const overrides: Partial<Record<RepoKey, RepoImpl>> = {};

@@ -142,6 +142,96 @@ export const SafetyEvent = z.object({
 });
 export type SafetyEvent = z.infer<typeof SafetyEvent>;
 
+/* --------------------------- Daily Check-in ------------------------- */
+export const Mood = z.enum(['great', 'good', 'ok', 'low', 'bad']);
+export type Mood = z.infer<typeof Mood>;
+
+export const DailyCheckin = SyncMeta.extend({
+  patientId: zUuid,
+  date: z.string(), // patient-local YYYY-MM-DD; unique per (patientId, date)
+  conversationId: zUuid.nullable().default(null),
+  mood: Mood.nullable().default(null),
+  energy: z.number().int().min(1).max(5).nullable().default(null),
+  sleepHours: z.number().min(0).max(24).nullable().default(null),
+  symptoms: z.array(z.string()).default([]),
+  notes: z.string().max(1000).nullable().default(null),
+  completedAt: zTimestamp.nullable().default(null),
+  dailyScoreId: zUuid.nullable().default(null),
+});
+export type DailyCheckin = z.infer<typeof DailyCheckin>;
+
+/* ----------------------------- Daily Score -------------------------- */
+export const ScoreBand = z.enum(['low', 'moderate', 'good', 'great']);
+export type ScoreBand = z.infer<typeof ScoreBand>;
+
+export const ScoreComponent = z.object({
+  key: z.string(),
+  label: z.string(),
+  weight: z.number(),
+  value: z.number(),
+});
+export type ScoreComponent = z.infer<typeof ScoreComponent>;
+
+export const DailyScore = SyncMeta.extend({
+  patientId: zUuid,
+  date: z.string(), // unique per (patientId, date)
+  score: z.number().int().min(0).max(100),
+  band: ScoreBand,
+  components: z.array(ScoreComponent),
+  checkInId: zUuid.nullable().default(null),
+  computedAt: zTimestamp,
+  disclaimerShown: z.boolean().default(true),
+});
+export type DailyScore = z.infer<typeof DailyScore>;
+
+/* ----------------------------- Health Event ------------------------- */
+export const HealthEventType = z.enum([
+  'symptom',
+  'measurement',
+  'appointment',
+  'medication_taken',
+  'note',
+]);
+export const HealthEventSource = z.enum(['patient', 'onboarding', 'daily_checkin', 'medication']);
+
+export const HealthEvent = SyncMeta.extend({
+  patientId: zUuid,
+  type: HealthEventType,
+  category: z.string().nullable().default(null),
+  title: z.string().min(1).max(120),
+  description: z.string().max(2000).nullable().default(null),
+  value: z.number().nullable().default(null),
+  unit: z.string().nullable().default(null),
+  occurredAt: zTimestamp,
+  recordedAt: zTimestamp,
+  source: HealthEventSource,
+  relatedConversationId: zUuid.nullable().default(null),
+});
+export type HealthEvent = z.infer<typeof HealthEvent>;
+
+/* ------------------------------- Insight ---------------------------- */
+export const InsightCategory = z.enum([
+  'trend',
+  'education',
+  'encouragement',
+  'reminder_suggestion',
+]);
+export type InsightCategory = z.infer<typeof InsightCategory>;
+
+export const Insight = SyncMeta.extend({
+  patientId: zUuid,
+  title: z.string().min(1).max(120),
+  body: z.string(),
+  category: InsightCategory,
+  sourceType: z.enum(['rule', 'model']).default('rule'),
+  relatedEntityType: z.enum(['daily_score', 'health_event', 'goal', 'medication']).nullable().default(null),
+  relatedEntityId: zUuid.nullable().default(null),
+  disclaimerShown: z.boolean().default(true),
+  generatedAt: zTimestamp,
+  dismissedAt: zTimestamp.nullable().default(null),
+});
+export type Insight = z.infer<typeof Insight>;
+
 /* ----------------------- Companion response ------------------------- */
 export const CompanionResponse = z.object({
   companionTurn: ConversationTurn,
