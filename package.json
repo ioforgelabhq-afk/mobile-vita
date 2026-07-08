@@ -11,10 +11,14 @@
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
-    "test:logic": "jest tests/unit tests/contract"
+    "test:logic": "jest tests/unit tests/contract",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.0",
+    "@testing-library/react-native": "^14.0.1",
+    "eslint-config-expo": "~57.0.0",
     "expo": "^57.0.4",
     "expo-constants": "~57.0.3",
     "expo-font": "~57.0.0",
@@ -23,7 +27,9 @@
     "expo-secure-store": "~57.0.0",
     "expo-sqlite": "~57.0.0",
     "expo-status-bar": "~57.0.0",
+    "jest-expo": "~57.0.1",
     "nativewind": "^4.1.0",
+    "prettier": "^3.9.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hook-form": "^7.54.0",
@@ -39,10 +45,14 @@
   },
   "devDependencies": {
     "@babel/core": "^7.25.0",
-    "@types/jest": "^29.5.0",
+    "@react-native/jest-preset": "^0.86.0",
+    "@types/jest": "^30.0.0",
     "@types/react": "~19.2.4",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.2.0",
+    "eslint": "^9.39.4",
+    "jest": "^30.4.2",
+    "jest-environment-node": "^30.4.1",
+    "test-renderer": "^1.2.0",
+    "ts-jest": "^29.4.11",
     "typescript": "~6.0.3"
   }
 }

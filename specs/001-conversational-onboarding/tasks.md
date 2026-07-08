@@ -31,7 +31,7 @@ implementation-only per the "tests are optional" rule.
 - [X] T001 Initialize Expo (managed) + TypeScript (strict) project with Expo Router at repo root
 - [X] T002 Install dependencies: expo-router, zustand, @tanstack/react-query, react-hook-form, zod, nativewind, expo-sqlite, expo-secure-store, expo-notifications
 - [X] T003 [P] Configure NativeWind + `tailwind.config.js` + `global.css` using the token mapping in `docs/design/brand-tokens.md` (colors, `Hanken Grotesk`/`IBM Plex Mono` fonts, radii); load fonts via `expo-font`
-- [ ] T004 [P] Configure ESLint + Prettier + `tsconfig.json` (strict, path aliases)
+- [X] T004 [P] Configure ESLint + Prettier + `tsconfig.json` (strict, path aliases)
 - [ ] T005 [P] Configure Jest + React Native Testing Library in `jest.config.js` and `tests/setup.ts`
 - [X] T006 Create source tree per plan.md: `src/{repositories,services,stores,lib,features,ui}` and `app/(onboarding)/`
 
@@ -191,8 +191,8 @@ duplication.
 - [X] T060 [P] Add architecture-invariant guard (lint rule/test): screens/hooks must not import `repositories/mock` or `repositories/api` directly in `tests/unit/architecture.test.ts` (Principle IX)
 - [ ] T061 [P] Accessibility pass on all onboarding screens in `app/(onboarding)/`
 - [X] T062 [P] Unit tests for guardrails + adaptive flow selection in `tests/unit/`
-- [ ] T063 Privacy review checklist: encryption-at-rest, minimal collection, consent-gated writes (Principle VII; HIPAA/GDPR)
-- [ ] T064 [P] Update feature README linking `docs/domain/domain-model.md` and `docs/api/openapi.yaml`
+- [X] T063 Privacy review checklist: encryption-at-rest, minimal collection, consent-gated writes (Principle VII; HIPAA/GDPR)
+- [X] T064 [P] Update feature README linking `docs/domain/domain-model.md` and `docs/api/openapi.yaml`
 
 ---
 

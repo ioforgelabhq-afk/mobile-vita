@@ -1,6 +1,5 @@
 import { useCallback, useEffect } from 'react';
-import { conversationRepository } from '@/repositories';
-import { authRepository } from '@/repositories';
+import { authRepository, conversationRepository } from '@/repositories';
 import { useOnboardingStore } from '@/stores/onboarding';
 import { uuid } from '@/lib/ids';
 
@@ -18,7 +17,6 @@ export function useOnboardingFlow() {
     completed,
     setConversation,
     setTurns,
-    appendTurns,
     setPendingSafety,
     setCompleted,
   } = useOnboardingStore();
