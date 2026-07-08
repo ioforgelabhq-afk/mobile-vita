@@ -11,6 +11,10 @@ import type {
   ConversationTurn,
   LivingRecordEntry,
   SafetyEvent,
+  DailyCheckin,
+  DailyScore,
+  HealthEvent,
+  Insight,
 } from '@/repositories/contracts/schemas';
 
 export const stores = {
@@ -20,6 +24,10 @@ export const stores = {
   turns: memoryStore<ConversationTurn>(),
   entries: memoryStore<LivingRecordEntry>(),
   safetyEvents: memoryStore<SafetyEvent>(),
+  dailyCheckins: memoryStore<DailyCheckin>(),
+  dailyScores: memoryStore<DailyScore>(),
+  healthEvents: memoryStore<HealthEvent>(),
+  insights: memoryStore<Insight>(),
 };
 
 export type MockStores = typeof stores;

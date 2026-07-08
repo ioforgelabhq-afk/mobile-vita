@@ -43,5 +43,9 @@ Record, physician briefing.
 
 ## Spec Kit workflow
 
-Specs live in `specs/`. Current feature: `specs/001-conversational-onboarding/`
-(spec → clarify → plan done; next: `/speckit-tasks`). Use the `speckit-*` skills.
+Specs live in `specs/`. Features:
+- `specs/001-conversational-onboarding/` — implemented (US1–US4), PR open.
+- `specs/002-daily-checkin/` — spec + plan done; next: `/speckit-tasks`. Reuses the 001
+  foundation (repository layer, SafetyService, guardrails, consent gate, design tokens).
+
+Use the `speckit-*` skills.

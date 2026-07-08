@@ -13,6 +13,16 @@ import { MockLivingRecordRepository } from '@/repositories/mock/living-record.re
 import { ApiLivingRecordRepository } from '@/repositories/api/living-record.repository';
 import { MockConsentRepository } from '@/repositories/mock/consent.repository';
 import { ApiConsentRepository } from '@/repositories/api/consent.repository';
+import { MockDailyCheckinRepository } from '@/repositories/mock/daily-checkin.repository';
+import { MockDailyScoreRepository } from '@/repositories/mock/daily-score.repository';
+import { MockHealthEventRepository } from '@/repositories/mock/health-event.repository';
+import { MockInsightRepository } from '@/repositories/mock/insight.repository';
+import {
+  ApiDailyCheckinRepository,
+  ApiDailyScoreRepository,
+  ApiHealthEventRepository,
+  ApiInsightRepository,
+} from '@/repositories/api/daily.repositories';
 
 function methods(obj: object): string[] {
   return Object.getOwnPropertyNames(Object.getPrototypeOf(obj))
@@ -31,6 +41,10 @@ describe('Mock ≡ API method parity', () => {
     ],
     ['LivingRecord', new MockLivingRecordRepository({} as any), new ApiLivingRecordRepository()],
     ['Consent', new MockConsentRepository({} as any), new ApiConsentRepository()],
+    ['DailyCheckin', new MockDailyCheckinRepository({} as any), new ApiDailyCheckinRepository()],
+    ['DailyScore', new MockDailyScoreRepository({} as any), new ApiDailyScoreRepository()],
+    ['HealthEvent', new MockHealthEventRepository({} as any), new ApiHealthEventRepository()],
+    ['Insight', new MockInsightRepository({} as any), new ApiInsightRepository()],
   ])('%s: every contract (API) method exists on the Mock', (_name, mock, api) => {
     // The mock may add private helpers; the guarantee is that it implements at least the
     // full contract surface the API defines (Principle IX). tsc enforces exact type conformance.

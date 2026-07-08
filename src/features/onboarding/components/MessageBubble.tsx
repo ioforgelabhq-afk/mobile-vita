@@ -1,8 +1,13 @@
 import { Text, View } from 'react-native';
-import type { ConversationTurn } from '@/repositories/contracts/schemas';
+
+/** Minimal shape a bubble needs — satisfied by ConversationTurn and the daily transcript msg. */
+export interface BubbleTurn {
+  role: 'companion' | 'patient';
+  text: string;
+}
 
 /** One conversation turn. Companion left/neutral, patient right/primary. */
-export function MessageBubble({ turn }: { turn: ConversationTurn }) {
+export function MessageBubble({ turn }: { turn: BubbleTurn }) {
   const isPatient = turn.role === 'patient';
   return (
     <View className={`my-1.5 max-w-[85%] ${isPatient ? 'self-end' : 'self-start'}`}>
