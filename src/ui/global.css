@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+  VITA design tokens (see docs/design/brand-tokens.md).
+  Light is the default; dark overrides via the `dark` class (NativeWind color scheme).
+  Accent direction A/B/C only resets --primary / --primary-deep.
+*/
+:root {
+  /* accent A · Teal (default) */
+  --primary: #1f6f8e;
+  --primary-deep: #045373;
+  --secondary: #35c6b3;
+  --secondary-deep: #0c7d6e;
+  --accent: #d3204e;
+  --accent-deep: #8f0c2c;
+
+  /* light neutrals */
+  --canvas: #f6f9fa;
+  --surface: #ffffff;
+  --surface-2: #f0f4f5;
+  --sunken: #eaf0f1;
+  --ink: #14313a;
+  --ink-2: #425a62;
+  --ink-3: #6e858c;
+  --line: #e1e9eb;
+  --line-2: #eef3f4;
+}
+
+.accent-b {
+  --primary: #08406d;
+  --primary-deep: #05314f;
+}
+.accent-c {
+  --primary: #355d7c;
+  --primary-deep: #21425c;
+}
+
+.dark:root,
+:root.dark {
+  --canvas: #0d242e;
+  --surface: #143039;
+  --surface-2: #0f2a33;
+  --sunken: #0a1d25;
+  --ink: #eef4f5;
+  --ink-2: #aec0c5;
+  --ink-3: #7d949b;
+  --line: #234049;
+  --line-2: #1b323b;
+}
