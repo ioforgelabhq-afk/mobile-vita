@@ -1,0 +1,32 @@
+{
+  "expo": {
+    "name": "VITA",
+    "slug": "vita-mobile",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "scheme": "vita",
+    "userInterfaceStyle": "automatic",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "health.vita.app"
+    },
+    "android": {
+      "package": "health.vita.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "static"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      "expo-sqlite",
+      "expo-status-bar"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}

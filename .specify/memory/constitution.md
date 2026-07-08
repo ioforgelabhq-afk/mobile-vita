@@ -1,7 +1,7 @@
 <!--
 SYNC IMPACT REPORT
 ==================
-Version change: (none) → 1.0.0
+Version change: (none) → 0.0.0
 Bump rationale: Initial ratification of the VITA Mobile MVP constitution. Template
 placeholders replaced with ten concrete, non-negotiable principles plus governance.
 
@@ -231,4 +231,4 @@ another guideline conflicts with this document, this document prevails.
 - **Living document**: This constitution is expected to evolve with the product; every
   amendment MUST keep the Sync Impact Report and dependent templates in sync.
 
-**Version**: 1.0.0 | **Ratified**: 2026-07-06 | **Last Amended**: 2026-07-06
+**Version**: 0.0.0 | **Ratified**: 2026-07-06 | **Last Amended**: 2026-07-06

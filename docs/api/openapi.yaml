@@ -1,0 +1,1238 @@
+openapi: 3.1.0
+info:
+  title: VITA Health Companion API
+  version: 1.0.0
+  description: |
+    REST API contract for the VITA mobile application. The backend does NOT yet exist — this
+    contract is the source of truth the backend team implements against, and the mobile app's
+    `api/` repository implementations conform to it. Until the backend ships, the app uses Mock
+    repositories that satisfy the same contract (Constitution Principle IX).
+
+    Domain: see `docs/domain/domain-model.md`.
+
+    Principles baked into this contract:
+    - Patient owns all data: access/export/delete + consent revocation endpoints (II, VII).
+    - Informational, never diagnostic: Insight/DailyScore payloads carry disclaimers (III).
+    - Safety first: safety notifications/events are first-class (IV).
+    - Offline-first: all mutations accept an idempotency key so client replay is safe (VIII).
+
+  contact:
+    name: VITA Engineering
+  license:
+    name: Proprietary
+
+servers:
+  - url: https://api.vita.health/v1
+    description: Production (v1)
+  - url: https://staging-api.vita.health/v1
+    description: Staging (v1)
+
+# ---------------------------------------------------------------------------
+# Versioning: primary via URL path (/v1). Clients SHOULD also send X-API-Version.
+# The server MAY use it for minor negotiation; path segment is authoritative.
+# ---------------------------------------------------------------------------
+security:
+  - bearerAuth: []
+
+tags:
+  - name: Auth
+  - name: Patients
+  - name: Consent
+  - name: Conversations
+  - name: Daily Check-ins
+  - name: Health Events
+  - name: Living Record
+  - name: Insights
+  - name: Goals
+  - name: Medications
+  - name: Physicians
+  - name: Notifications
+  - name: Daily Scores
+
+paths:
+  # ----------------------------- Auth (mocked in app) -----------------------
+  /auth/token:
+    post:
+      tags: [Auth]
+      summary: Exchange credentials (or anonymous device identity) for tokens
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TokenRequest' }
+      responses:
+        '200':
+          description: Tokens issued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429': { $ref: '#/components/responses/TooManyRequests' }
+  /auth/refresh:
+    post:
+      tags: [Auth]
+      summary: Refresh an access token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RefreshRequest' }
+      responses:
+        '200':
+          description: New tokens
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TokenResponse' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ----------------------------- Patients -----------------------------------
+  /patients/me:
+    get:
+      tags: [Patients]
+      summary: Get the authenticated patient
+      responses:
+        '200':
+          description: Patient
+          content: { application/json: { schema: { $ref: '#/components/schemas/Patient' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Patients]
+      summary: Update patient profile basics
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/PatientPatch' } }
+      responses:
+        '200':
+          description: Updated patient
+          content: { application/json: { schema: { $ref: '#/components/schemas/Patient' } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /patients/me/export:
+    get:
+      tags: [Patients]
+      summary: Export all patient data (data ownership — II, GDPR/HIPAA)
+      responses:
+        '200':
+          description: Portable machine-readable export of the full record
+          content: { application/json: { schema: { $ref: '#/components/schemas/PatientExport' } } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    delete:
+      tags: [Patients]
+      summary: Delete the patient and all associated data (right to erasure — II)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '202': { description: Deletion accepted and will be honored end-to-end }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  # ----------------------------- Consent ------------------------------------
+  /consent/definition:
+    get:
+      tags: [Consent]
+      summary: Get the current consent definition (purposes + copy version)
+      responses:
+        '200':
+          description: Consent definition
+          content: { application/json: { schema: { $ref: '#/components/schemas/ConsentDefinition' } } }
+  /consent:
+    get:
+      tags: [Consent]
+      summary: Get the patient's current consent record
+      responses:
+        '200':
+          description: Consent record
+          content: { application/json: { schema: { $ref: '#/components/schemas/Consent' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Consent]
+      summary: Capture granular consent decisions (FR-012/013/014)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/CaptureConsentRequest' } }
+      responses:
+        '201':
+          description: Consent captured
+          content: { application/json: { schema: { $ref: '#/components/schemas/Consent' } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /consent/revoke:
+    post:
+      tags: [Consent]
+      summary: Revoke consent (all, or a single purpose) (FR-015)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/RevokeConsentRequest' } }
+      responses:
+        '200':
+          description: Updated consent record
+          content: { application/json: { schema: { $ref: '#/components/schemas/Consent' } } }
+
+  # ----------------------------- Conversations ------------------------------
+  /conversations:
+    get:
+      tags: [Conversations]
+      summary: List conversations (paginated)
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - name: type
+          in: query
+          schema: { type: string, enum: [onboarding, daily_checkin, freeform] }
+      responses:
+        '200':
+          description: Page of conversations
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Conversation' } }
+    post:
+      tags: [Conversations]
+      summary: Start (or resume) a conversation
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/StartConversationRequest' } }
+      responses:
+        '201':
+          description: Conversation started/resumed
+          content: { application/json: { schema: { $ref: '#/components/schemas/Conversation' } } }
+  /conversations/{conversationId}:
+    parameters: [ { $ref: '#/components/parameters/ConversationId' } ]
+    get:
+      tags: [Conversations]
+      summary: Get a conversation with its turns
+      responses:
+        '200':
+          description: Conversation
+          content: { application/json: { schema: { $ref: '#/components/schemas/ConversationWithTurns' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+  /conversations/{conversationId}/messages:
+    parameters: [ { $ref: '#/components/parameters/ConversationId' } ]
+    post:
+      tags: [Conversations]
+      summary: Send a patient message; returns the next companion turn (safety-screened first, IV)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/SendMessageRequest' } }
+      responses:
+        '200':
+          description: Companion response (may include a safetyEvent and suggested entries)
+          content: { application/json: { schema: { $ref: '#/components/schemas/CompanionResponse' } } }
+        '400': { $ref: '#/components/responses/BadRequest' }
+  /conversations/{conversationId}/complete:
+    parameters: [ { $ref: '#/components/parameters/ConversationId' } ]
+    post:
+      tags: [Conversations]
+      summary: Mark a conversation complete (FR-025)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '200':
+          description: Completed conversation
+          content: { application/json: { schema: { $ref: '#/components/schemas/Conversation' } } }
+
+  # ----------------------------- Daily Check-ins ----------------------------
+  /daily-checkins:
+    get:
+      tags: [Daily Check-ins]
+      summary: List daily check-ins (paginated, newest first)
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/FromDate' }
+        - { $ref: '#/components/parameters/ToDate' }
+      responses:
+        '200':
+          description: Page of check-ins
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/DailyCheckin' } }
+    post:
+      tags: [Daily Check-ins]
+      summary: Create today's check-in (unique per patient/day)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/CreateDailyCheckinRequest' } }
+      responses:
+        '201':
+          description: Check-in created (may include the computed DailyScore)
+          content: { application/json: { schema: { $ref: '#/components/schemas/DailyCheckinWithScore' } } }
+        '409': { $ref: '#/components/responses/Conflict' }
+  /daily-checkins/{checkinId}:
+    parameters: [ { name: checkinId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    get:
+      tags: [Daily Check-ins]
+      summary: Get a check-in
+      responses:
+        '200':
+          description: Check-in
+          content: { application/json: { schema: { $ref: '#/components/schemas/DailyCheckin' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  # ----------------------------- Health Events ------------------------------
+  /health-events:
+    get:
+      tags: [Health Events]
+      summary: List health events (paginated)
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - name: type
+          in: query
+          schema: { type: string, enum: [symptom, measurement, appointment, medication_taken, note] }
+        - { $ref: '#/components/parameters/FromDate' }
+        - { $ref: '#/components/parameters/ToDate' }
+      responses:
+        '200':
+          description: Page of health events
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/HealthEvent' } }
+    post:
+      tags: [Health Events]
+      summary: Record a health event (requires store_health_data consent)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/CreateHealthEventRequest' } }
+      responses:
+        '201':
+          description: Created
+          content: { application/json: { schema: { $ref: '#/components/schemas/HealthEvent' } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /health-events/{eventId}:
+    parameters: [ { name: eventId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    patch:
+      tags: [Health Events]
+      summary: Update a health event
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/UpdateHealthEventRequest' } }
+      responses:
+        '200':
+          description: Updated
+          content: { application/json: { schema: { $ref: '#/components/schemas/HealthEvent' } } }
+    delete:
+      tags: [Health Events]
+      summary: Delete a health event
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '204': { description: Deleted }
+
+  # ----------------------------- Living Record ------------------------------
+  /living-record:
+    get:
+      tags: [Living Record]
+      summary: Get the living record aggregate (summary + entry counts)
+      responses:
+        '200':
+          description: Living record
+          content: { application/json: { schema: { $ref: '#/components/schemas/LivingRecord' } } }
+  /living-record/entries:
+    get:
+      tags: [Living Record]
+      summary: List living record entries (paginated)
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - name: category
+          in: query
+          schema: { type: string, enum: [goal, concern, health_context, preference, other] }
+      responses:
+        '200':
+          description: Page of entries
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/LivingRecordEntry' } }
+    post:
+      tags: [Living Record]
+      summary: Add an entry (requires store_health_data consent)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/CreateEntryRequest' } }
+      responses:
+        '201':
+          description: Created entry
+          content: { application/json: { schema: { $ref: '#/components/schemas/LivingRecordEntry' } } }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /living-record/entries/{entryId}:
+    parameters: [ { name: entryId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    patch:
+      tags: [Living Record]
+      summary: Correct an entry (supersedes the prior value — FR-008)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/UpdateEntryRequest' } }
+      responses:
+        '200':
+          description: Corrected entry
+          content: { application/json: { schema: { $ref: '#/components/schemas/LivingRecordEntry' } } }
+    delete:
+      tags: [Living Record]
+      summary: Remove an entry (soft delete — II)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '204': { description: Removed }
+
+  # ----------------------------- Insights -----------------------------------
+  /insights:
+    get:
+      tags: [Insights]
+      summary: List insights (paginated). All payloads are informational, never diagnostic (III).
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - name: includeDismissed
+          in: query
+          schema: { type: boolean, default: false }
+      responses:
+        '200':
+          description: Page of insights
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Insight' } }
+  /insights/{insightId}/dismiss:
+    parameters: [ { name: insightId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [Insights]
+      summary: Dismiss an insight
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '200':
+          description: Dismissed insight
+          content: { application/json: { schema: { $ref: '#/components/schemas/Insight' } } }
+
+  # ----------------------------- Goals --------------------------------------
+  /goals:
+    get:
+      tags: [Goals]
+      summary: List goals (paginated)
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, achieved, paused, abandoned] }
+      responses:
+        '200':
+          description: Page of goals
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Goal' } }
+    post:
+      tags: [Goals]
+      summary: Create a goal
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/CreateGoalRequest' } }
+      responses:
+        '201':
+          description: Created goal
+          content: { application/json: { schema: { $ref: '#/components/schemas/Goal' } } }
+  /goals/{goalId}:
+    parameters: [ { name: goalId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    patch:
+      tags: [Goals]
+      summary: Update a goal (fields or status transition)
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/UpdateGoalRequest' } }
+      responses:
+        '200':
+          description: Updated goal
+          content: { application/json: { schema: { $ref: '#/components/schemas/Goal' } } }
+    delete:
+      tags: [Goals]
+      summary: Delete a goal
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '204': { description: Deleted }
+
+  # ----------------------------- Medications --------------------------------
+  /medications:
+    get:
+      tags: [Medications]
+      summary: List medications (paginated). Tracking only — VITA does not prescribe (III).
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - name: active
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Page of medications
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Medication' } }
+    post:
+      tags: [Medications]
+      summary: Add a medication
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/CreateMedicationRequest' } }
+      responses:
+        '201':
+          description: Created medication
+          content: { application/json: { schema: { $ref: '#/components/schemas/Medication' } } }
+  /medications/{medicationId}:
+    parameters: [ { name: medicationId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    patch:
+      tags: [Medications]
+      summary: Update a medication
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/UpdateMedicationRequest' } }
+      responses:
+        '200':
+          description: Updated medication
+          content: { application/json: { schema: { $ref: '#/components/schemas/Medication' } } }
+    delete:
+      tags: [Medications]
+      summary: Delete a medication
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '204': { description: Deleted }
+
+  # ----------------------------- Physicians ---------------------------------
+  /physicians:
+    get:
+      tags: [Physicians]
+      summary: List physicians (paginated)
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+      responses:
+        '200':
+          description: Page of physicians
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Physician' } }
+    post:
+      tags: [Physicians]
+      summary: Add a physician contact
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/CreatePhysicianRequest' } }
+      responses:
+        '201':
+          description: Created physician
+          content: { application/json: { schema: { $ref: '#/components/schemas/Physician' } } }
+  /physicians/{physicianId}:
+    parameters: [ { name: physicianId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    patch:
+      tags: [Physicians]
+      summary: Update a physician contact
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      requestBody:
+        required: true
+        content:
+          application/json: { schema: { $ref: '#/components/schemas/UpdatePhysicianRequest' } }
+      responses:
+        '200':
+          description: Updated physician
+          content: { application/json: { schema: { $ref: '#/components/schemas/Physician' } } }
+    delete:
+      tags: [Physicians]
+      summary: Delete a physician contact
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '204': { description: Deleted }
+
+  # ----------------------------- Notifications ------------------------------
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications (paginated). Safety notifications rank first (IV).
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - name: status
+          in: query
+          schema: { type: string, enum: [scheduled, delivered, read, cancelled] }
+      responses:
+        '200':
+          description: Page of notifications
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/Notification' } }
+  /notifications/{notificationId}/read:
+    parameters: [ { name: notificationId, in: path, required: true, schema: { type: string, format: uuid } } ]
+    post:
+      tags: [Notifications]
+      summary: Mark a notification read
+      parameters: [ { $ref: '#/components/parameters/IdempotencyKey' } ]
+      responses:
+        '200':
+          description: Updated notification
+          content: { application/json: { schema: { $ref: '#/components/schemas/Notification' } } }
+
+  # ----------------------------- Daily Scores -------------------------------
+  /daily-scores:
+    get:
+      tags: [Daily Scores]
+      summary: List daily scores (paginated). Informational wellness indicator, not a diagnosis (III).
+      parameters:
+        - { $ref: '#/components/parameters/Cursor' }
+        - { $ref: '#/components/parameters/Limit' }
+        - { $ref: '#/components/parameters/FromDate' }
+        - { $ref: '#/components/parameters/ToDate' }
+      responses:
+        '200':
+          description: Page of daily scores
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Page'
+                  - type: object
+                    properties:
+                      data: { type: array, items: { $ref: '#/components/schemas/DailyScore' } }
+  /daily-scores/{date}:
+    parameters: [ { name: date, in: path, required: true, schema: { type: string, format: date } } ]
+    get:
+      tags: [Daily Scores]
+      summary: Get the daily score for a date
+      responses:
+        '200':
+          description: Daily score
+          content: { application/json: { schema: { $ref: '#/components/schemas/DailyScore' } } }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: |
+        JWT access token from POST /auth/token. Mocked in the mobile app for the MVP
+        (a fake token is issued locally); the future backend enforces real JWTs.
+
+  parameters:
+    IdempotencyKey:
+      name: Idempotency-Key
+      in: header
+      required: true
+      description: Client-generated UUID; ensures offline replay does not duplicate writes (VIII).
+      schema: { type: string, format: uuid }
+    Cursor:
+      name: cursor
+      in: query
+      description: Opaque cursor from a previous page's `page.nextCursor`.
+      schema: { type: string }
+    Limit:
+      name: limit
+      in: query
+      description: Page size.
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    FromDate:
+      name: from
+      in: query
+      schema: { type: string, format: date }
+    ToDate:
+      name: to
+      in: query
+      schema: { type: string, format: date }
+    ConversationId:
+      name: conversationId
+      in: path
+      required: true
+      schema: { type: string, format: uuid }
+
+  responses:
+    BadRequest:
+      description: Validation error
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Unauthorized:
+      description: Missing or invalid credentials
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Forbidden:
+      description: Action not permitted (e.g. required consent not granted — FR-016)
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    NotFound:
+      description: Resource not found
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Conflict:
+      description: Version/uniqueness conflict (e.g. duplicate daily check-in, stale version)
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    TooManyRequests:
+      description: Rate limited
+      headers:
+        Retry-After: { schema: { type: integer }, description: Seconds to wait }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+
+  schemas:
+    # -------- shared envelopes --------
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Stable machine code
+              enum:
+                [validation_error, unauthorized, forbidden, not_found, conflict,
+                 consent_required, rate_limited, safety_intervention_required, internal_error]
+            message: { type: string, description: Human-readable summary }
+            details:
+              type: array
+              description: Field-level validation problems
+              items:
+                type: object
+                properties:
+                  field: { type: string }
+                  issue: { type: string }
+            traceId: { type: string }
+    Page:
+      type: object
+      required: [data, page]
+      properties:
+        data: { type: array, items: {} }
+        page:
+          type: object
+          required: [hasMore, limit]
+          properties:
+            nextCursor: { type: [string, 'null'] }
+            hasMore: { type: boolean }
+            limit: { type: integer }
+    SyncMeta:
+      type: object
+      description: Fields present on every persisted entity (mirrors local sync fields).
+      properties:
+        id: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        version: { type: integer }
+        deletedAt: { type: [string, 'null'], format: date-time }
+
+    # -------- auth --------
+    TokenRequest:
+      type: object
+      required: [grantType]
+      properties:
+        grantType: { type: string, enum: [anonymous_device, password] }
+        deviceId: { type: string, description: Required for anonymous_device }
+        email: { type: string, format: email }
+        password: { type: string }
+    RefreshRequest:
+      type: object
+      required: [refreshToken]
+      properties:
+        refreshToken: { type: string }
+    TokenResponse:
+      type: object
+      required: [accessToken, tokenType, expiresIn]
+      properties:
+        accessToken: { type: string }
+        refreshToken: { type: string }
+        tokenType: { type: string, enum: [Bearer] }
+        expiresIn: { type: integer, description: Access token lifetime in seconds }
+        patientId: { type: string, format: uuid }
+
+    # -------- patient --------
+    Patient:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            displayName: { type: [string, 'null'], maxLength: 80 }
+            dateOfBirth: { type: [string, 'null'], format: date }
+            biologicalSex: { type: [string, 'null'], enum: [female, male, intersex, unspecified, null] }
+            locale: { type: string }
+            accountLinked: { type: boolean }
+            email: { type: [string, 'null'], format: email }
+    PatientPatch:
+      type: object
+      properties:
+        displayName: { type: string, maxLength: 80 }
+        dateOfBirth: { type: string, format: date }
+        biologicalSex: { type: string, enum: [female, male, intersex, unspecified] }
+        locale: { type: string }
+    PatientExport:
+      type: object
+      description: Full portable export of all patient-owned data (II).
+      properties:
+        patient: { $ref: '#/components/schemas/Patient' }
+        consent: { $ref: '#/components/schemas/Consent' }
+        livingRecord: { $ref: '#/components/schemas/LivingRecord' }
+        entries: { type: array, items: { $ref: '#/components/schemas/LivingRecordEntry' } }
+        healthEvents: { type: array, items: { $ref: '#/components/schemas/HealthEvent' } }
+        goals: { type: array, items: { $ref: '#/components/schemas/Goal' } }
+        medications: { type: array, items: { $ref: '#/components/schemas/Medication' } }
+        physicians: { type: array, items: { $ref: '#/components/schemas/Physician' } }
+        dailyCheckins: { type: array, items: { $ref: '#/components/schemas/DailyCheckin' } }
+        dailyScores: { type: array, items: { $ref: '#/components/schemas/DailyScore' } }
+        insights: { type: array, items: { $ref: '#/components/schemas/Insight' } }
+        exportedAt: { type: string, format: date-time }
+        format: { type: string, enum: [json] }
+
+    # -------- consent --------
+    ConsentPurpose:
+      type: string
+      enum: [store_health_data, personalize_guidance, improve_service, share_with_physician]
+    ConsentDefinition:
+      type: object
+      required: [version, purposes]
+      properties:
+        version: { type: string }
+        purposes:
+          type: array
+          items:
+            type: object
+            properties:
+              purpose: { $ref: '#/components/schemas/ConsentPurpose' }
+              label: { type: string }
+              description: { type: string }
+              required: { type: boolean }
+    ConsentGrant:
+      type: object
+      properties:
+        purpose: { $ref: '#/components/schemas/ConsentPurpose' }
+        granted: { type: boolean }
+        decidedAt: { type: string, format: date-time }
+    Consent:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            definitionVersion: { type: string }
+            capturedAt: { type: string, format: date-time }
+            revokedAt: { type: [string, 'null'], format: date-time }
+            grants: { type: array, items: { $ref: '#/components/schemas/ConsentGrant' } }
+    CaptureConsentRequest:
+      type: object
+      required: [version, grants]
+      properties:
+        version: { type: string }
+        grants:
+          type: array
+          items:
+            type: object
+            required: [purpose, granted]
+            properties:
+              purpose: { $ref: '#/components/schemas/ConsentPurpose' }
+              granted: { type: boolean }
+    RevokeConsentRequest:
+      type: object
+      properties:
+        purpose: { $ref: '#/components/schemas/ConsentPurpose' }
+        description: Omit purpose to revoke all consent.
+
+    # -------- conversation --------
+    Conversation:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            type: { type: string, enum: [onboarding, daily_checkin, freeform] }
+            status: { type: string, enum: [in_progress, completed, abandoned] }
+            currentStepId: { type: [string, 'null'] }
+            startedAt: { type: string, format: date-time }
+            completedAt: { type: [string, 'null'], format: date-time }
+    ConversationTurn:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            role: { type: string, enum: [companion, patient] }
+            text: { type: string, maxLength: 4000 }
+            promptId: { type: [string, 'null'] }
+            safetyFlagged: { type: boolean }
+    ConversationWithTurns:
+      allOf:
+        - $ref: '#/components/schemas/Conversation'
+        - type: object
+          properties:
+            turns: { type: array, items: { $ref: '#/components/schemas/ConversationTurn' } }
+    StartConversationRequest:
+      type: object
+      required: [type]
+      properties:
+        type: { type: string, enum: [onboarding, daily_checkin, freeform] }
+    SendMessageRequest:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string, minLength: 1, maxLength: 4000 }
+    SafetyEvent:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        matchType: { type: string, enum: [explicit, intent_pattern] }
+        resources:
+          type: array
+          items:
+            type: object
+            properties:
+              label: { type: string }
+              description: { type: string }
+              phone: { type: [string, 'null'] }
+              url: { type: [string, 'null'] }
+        surfacedAt: { type: string, format: date-time }
+    CompanionResponse:
+      type: object
+      description: |
+        Result of a patient message. Safety is screened first (IV); if a crisis is detected the
+        `safetyEvent` is present and the client MUST surface resources before continuing.
+      properties:
+        companionTurn: { $ref: '#/components/schemas/ConversationTurn' }
+        suggestedEntries: { type: array, items: { $ref: '#/components/schemas/LivingRecordEntry' } }
+        safetyEvent: { $ref: '#/components/schemas/SafetyEvent' }
+
+    # -------- daily check-in --------
+    DailyCheckin:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            date: { type: string, format: date }
+            conversationId: { type: [string, 'null'], format: uuid }
+            mood: { type: [string, 'null'], enum: [great, good, ok, low, bad, null] }
+            energy: { type: [integer, 'null'], minimum: 1, maximum: 5 }
+            sleepHours: { type: [number, 'null'], minimum: 0, maximum: 24 }
+            symptoms: { type: array, items: { type: string } }
+            notes: { type: [string, 'null'], maxLength: 1000 }
+            completedAt: { type: [string, 'null'], format: date-time }
+            dailyScoreId: { type: [string, 'null'], format: uuid }
+    CreateDailyCheckinRequest:
+      type: object
+      required: [date]
+      properties:
+        date: { type: string, format: date }
+        mood: { type: string, enum: [great, good, ok, low, bad] }
+        energy: { type: integer, minimum: 1, maximum: 5 }
+        sleepHours: { type: number, minimum: 0, maximum: 24 }
+        symptoms: { type: array, items: { type: string } }
+        notes: { type: string, maxLength: 1000 }
+    DailyCheckinWithScore:
+      allOf:
+        - $ref: '#/components/schemas/DailyCheckin'
+        - type: object
+          properties:
+            dailyScore: { $ref: '#/components/schemas/DailyScore' }
+
+    # -------- health event --------
+    HealthEvent:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            type: { type: string, enum: [symptom, measurement, appointment, medication_taken, note] }
+            category: { type: [string, 'null'] }
+            title: { type: string, maxLength: 120 }
+            description: { type: [string, 'null'], maxLength: 2000 }
+            value: { type: [number, 'null'] }
+            unit: { type: [string, 'null'] }
+            occurredAt: { type: string, format: date-time }
+            recordedAt: { type: string, format: date-time }
+            source: { type: string, enum: [patient, onboarding, daily_checkin, medication] }
+            relatedConversationId: { type: [string, 'null'], format: uuid }
+            medicationId: { type: [string, 'null'], format: uuid }
+    CreateHealthEventRequest:
+      type: object
+      required: [type, title, occurredAt]
+      properties:
+        type: { type: string, enum: [symptom, measurement, appointment, medication_taken, note] }
+        category: { type: string }
+        title: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 2000 }
+        value: { type: number }
+        unit: { type: string }
+        occurredAt: { type: string, format: date-time }
+        medicationId: { type: string, format: uuid }
+    UpdateHealthEventRequest:
+      type: object
+      properties:
+        title: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 2000 }
+        category: { type: string }
+        value: { type: number }
+        unit: { type: string }
+        occurredAt: { type: string, format: date-time }
+
+    # -------- living record --------
+    LivingRecord:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            summary: { type: [string, 'null'] }
+            lastEnrichedAt: { type: string, format: date-time }
+            entryCount: { type: integer }
+    LivingRecordEntry:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            category: { type: string, enum: [goal, concern, health_context, preference, other] }
+            content: { type: string, maxLength: 2000 }
+            source: { type: string, enum: [onboarding, daily_checkin, freeform] }
+            sourceTurnId: { type: [string, 'null'], format: uuid }
+            status: { type: string, enum: [active, corrected, removed] }
+            supersedesId: { type: [string, 'null'], format: uuid }
+    CreateEntryRequest:
+      type: object
+      required: [category, content]
+      properties:
+        category: { type: string, enum: [goal, concern, health_context, preference, other] }
+        content: { type: string, maxLength: 2000 }
+        sourceTurnId: { type: string, format: uuid }
+    UpdateEntryRequest:
+      type: object
+      properties:
+        category: { type: string, enum: [goal, concern, health_context, preference, other] }
+        content: { type: string, maxLength: 2000 }
+
+    # -------- insight --------
+    Insight:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            title: { type: string, maxLength: 120 }
+            body: { type: string }
+            category: { type: string, enum: [trend, education, encouragement, reminder_suggestion] }
+            sourceType: { type: string, enum: [rule, model] }
+            relatedEntityType: { type: [string, 'null'], enum: [health_event, goal, daily_score, medication, null] }
+            relatedEntityId: { type: [string, 'null'], format: uuid }
+            confidence: { type: [number, 'null'], minimum: 0, maximum: 1 }
+            disclaimerShown: { type: boolean }
+            generatedAt: { type: string, format: date-time }
+            dismissedAt: { type: [string, 'null'], format: date-time }
+
+    # -------- goal --------
+    Goal:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            title: { type: string, maxLength: 120 }
+            description: { type: [string, 'null'], maxLength: 1000 }
+            category: { type: string, enum: [activity, nutrition, sleep, mindfulness, medication_adherence, other] }
+            target: { type: [number, 'null'] }
+            unit: { type: [string, 'null'] }
+            cadence: { type: string, enum: [daily, weekly, monthly, once] }
+            status: { type: string, enum: [active, achieved, paused, abandoned] }
+            progress: { type: [number, 'null'], minimum: 0, maximum: 1 }
+            startDate: { type: string, format: date }
+            targetDate: { type: [string, 'null'], format: date }
+    CreateGoalRequest:
+      type: object
+      required: [title, category, cadence, startDate]
+      properties:
+        title: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 1000 }
+        category: { type: string, enum: [activity, nutrition, sleep, mindfulness, medication_adherence, other] }
+        target: { type: number }
+        unit: { type: string }
+        cadence: { type: string, enum: [daily, weekly, monthly, once] }
+        startDate: { type: string, format: date }
+        targetDate: { type: string, format: date }
+    UpdateGoalRequest:
+      type: object
+      properties:
+        title: { type: string, maxLength: 120 }
+        description: { type: string, maxLength: 1000 }
+        target: { type: number }
+        unit: { type: string }
+        cadence: { type: string, enum: [daily, weekly, monthly, once] }
+        status: { type: string, enum: [active, achieved, paused, abandoned] }
+        targetDate: { type: string, format: date }
+
+    # -------- medication --------
+    MedicationSchedule:
+      type: object
+      properties:
+        frequency: { type: string, enum: [daily, weekly, as_needed] }
+        timesOfDay: { type: array, items: { type: string, pattern: '^([01]\\d|2[0-3]):[0-5]\\d$' } }
+        daysOfWeek: { type: array, items: { type: integer, minimum: 0, maximum: 6 } }
+    Medication:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            name: { type: string, maxLength: 120 }
+            dosageAmount: { type: [number, 'null'] }
+            dosageUnit: { type: [string, 'null'] }
+            form: { type: [string, 'null'], enum: [tablet, capsule, liquid, injection, topical, other, null] }
+            schedule: { $ref: '#/components/schemas/MedicationSchedule' }
+            startDate: { type: string, format: date }
+            endDate: { type: [string, 'null'], format: date }
+            active: { type: boolean }
+            prescribedByPhysicianId: { type: [string, 'null'], format: uuid }
+            notes: { type: [string, 'null'], maxLength: 1000 }
+    CreateMedicationRequest:
+      type: object
+      required: [name, schedule, startDate]
+      properties:
+        name: { type: string, maxLength: 120 }
+        dosageAmount: { type: number }
+        dosageUnit: { type: string }
+        form: { type: string, enum: [tablet, capsule, liquid, injection, topical, other] }
+        schedule: { $ref: '#/components/schemas/MedicationSchedule' }
+        startDate: { type: string, format: date }
+        endDate: { type: string, format: date }
+        prescribedByPhysicianId: { type: string, format: uuid }
+        notes: { type: string, maxLength: 1000 }
+    UpdateMedicationRequest:
+      type: object
+      properties:
+        name: { type: string, maxLength: 120 }
+        dosageAmount: { type: number }
+        dosageUnit: { type: string }
+        form: { type: string, enum: [tablet, capsule, liquid, injection, topical, other] }
+        schedule: { $ref: '#/components/schemas/MedicationSchedule' }
+        endDate: { type: string, format: date }
+        active: { type: boolean }
+        notes: { type: string, maxLength: 1000 }
+
+    # -------- physician --------
+    Physician:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            name: { type: string, maxLength: 120 }
+            specialty: { type: [string, 'null'] }
+            organization: { type: [string, 'null'] }
+            phone: { type: [string, 'null'] }
+            email: { type: [string, 'null'], format: email }
+            notes: { type: [string, 'null'], maxLength: 1000 }
+            sharedViaConsent: { type: boolean }
+    CreatePhysicianRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 120 }
+        specialty: { type: string }
+        organization: { type: string }
+        phone: { type: string }
+        email: { type: string, format: email }
+        notes: { type: string, maxLength: 1000 }
+    UpdatePhysicianRequest:
+      type: object
+      properties:
+        name: { type: string, maxLength: 120 }
+        specialty: { type: string }
+        organization: { type: string }
+        phone: { type: string }
+        email: { type: string, format: email }
+        notes: { type: string, maxLength: 1000 }
+
+    # -------- notification --------
+    Notification:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            type: { type: string, enum: [checkin_reminder, medication_reminder, goal_reminder, insight, safety] }
+            title: { type: string, maxLength: 120 }
+            body: { type: string, maxLength: 500 }
+            priority: { type: string, enum: [low, normal, high, critical] }
+            scheduledFor: { type: string, format: date-time }
+            deliveredAt: { type: [string, 'null'], format: date-time }
+            readAt: { type: [string, 'null'], format: date-time }
+            status: { type: string, enum: [scheduled, delivered, read, cancelled] }
+            deepLink: { type: [string, 'null'] }
+            relatedEntityType: { type: [string, 'null'] }
+            relatedEntityId: { type: [string, 'null'], format: uuid }
+
+    # -------- daily score --------
+    ScoreComponent:
+      type: object
+      properties:
+        key: { type: string }
+        label: { type: string }
+        weight: { type: number }
+        value: { type: number }
+    DailyScore:
+      allOf:
+        - $ref: '#/components/schemas/SyncMeta'
+        - type: object
+          properties:
+            date: { type: string, format: date }
+            score: { type: integer, minimum: 0, maximum: 100 }
+            band: { type: string, enum: [low, moderate, good, great] }
+            components: { type: array, items: { $ref: '#/components/schemas/ScoreComponent' } }
+            checkInId: { type: [string, 'null'], format: uuid }
+            computedAt: { type: string, format: date-time }
+            disclaimerShown: { type: boolean }
