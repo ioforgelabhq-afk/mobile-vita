@@ -48,7 +48,7 @@ export default function LivingRecordScreen() {
         <Button
           label="Preparar resumen para tu médico"
           variant="outline"
-          onPress={() => router.push('/(briefing)/physicians')}
+          onPress={() => router.push('/(tabs)/briefing/physicians')}
         />
 
         {history.length > 0 ? (

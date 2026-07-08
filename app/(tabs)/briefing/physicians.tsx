@@ -64,7 +64,7 @@ export default function PhysiciansScreen() {
           <Button label="Agregar médico" variant="outline" onPress={() => setAdding(true)} />
         )}
 
-        <Button label="Generar resumen" onPress={() => router.push('/(briefing)/generate')} />
+        <Button label="Generar resumen" onPress={() => router.push('/(tabs)/briefing/generate')} />
       </ScrollView>
     </Screen>
   );

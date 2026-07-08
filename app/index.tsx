@@ -1,18 +1,12 @@
-import { useEffect } from 'react';
 import { Redirect } from 'expo-router';
 import { View, ActivityIndicator } from 'react-native';
 import { useQuery } from '@tanstack/react-query';
-import {
-  authRepository,
-  conversationRepository,
-  consentRepository,
-  dailyCheckinRepository,
-} from '@/repositories';
-import { todayLocal } from '@/lib/date';
+import { authRepository, conversationRepository, consentRepository } from '@/repositories';
 
 /**
  * Entry route. Routes a first-time patient into onboarding; a returning patient with a
- * completed onboarding conversation is recognized and not sent through it again (FR-024).
+ * completed onboarding conversation is recognized and not sent through it again (FR-024). Once
+ * onboarding is done, the tab bar (`(tabs)`) is home — the "Hoy" tab decides check-in vs. result.
  */
 export default function Index() {
   const { data, isLoading } = useQuery({
@@ -23,21 +17,13 @@ export default function Index() {
       const consent = await consentRepository().get(patient.id);
       const turns = await conversationRepository().getTurns(convo.id);
       const patientTurns = turns.filter((t) => t.role === 'patient').length;
-      const onboardingDone = convo.status === 'completed';
-      // Once onboarding is done, the daily loop is home. Check today's check-in (FR-004).
-      const todayCheckin = onboardingDone
-        ? await dailyCheckinRepository().forDate(patient.id, todayLocal())
-        : null;
       return {
-        completed: onboardingDone,
+        completed: convo.status === 'completed',
         started: patientTurns > 0, // onboarding conversation under way → resume it
         hasConsent: !!consent,
-        checkedInToday: !!todayCheckin?.completedAt,
       };
     },
   });
-
-  useEffect(() => {}, []);
 
   if (isLoading || !data) {
     return (
@@ -47,11 +33,10 @@ export default function Index() {
     );
   }
 
-  // Routing: finished onboarding → the daily loop (today's result if already checked in, else the
-  // check-in). Mid-onboarding → resume the wizard where the patient left off (FR-023/024).
+  // Mid-onboarding → resume the wizard where the patient left off (FR-023/024).
   let href: string;
   if (data.completed) {
-    href = data.checkedInToday ? '/(daily)/result' : '/(daily)/checkin';
+    href = '/(tabs)/daily';
   } else if (data.started || data.hasConsent) {
     href = '/(onboarding)/conversation';
   } else {

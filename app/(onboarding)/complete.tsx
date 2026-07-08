@@ -19,7 +19,7 @@ export default function CompleteScreen() {
         <Text className="font-sans text-3xl font-bold text-ink">{completion.title}</Text>
         <Text className="font-sans text-ink-2 text-base">{completion.body}</Text>
         <AccountLink />
-        <Button label={completion.cta} onPress={() => router.replace('/(daily)/checkin' as never)} />
+        <Button label={completion.cta} onPress={() => router.replace('/(tabs)/daily/checkin' as never)} />
       </View>
     </Screen>
   );

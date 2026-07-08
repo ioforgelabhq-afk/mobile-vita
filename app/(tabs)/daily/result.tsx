@@ -38,8 +38,11 @@ export default function ResultScreen() {
           ))}
       </ScrollView>
       <View className="py-4 gap-2">
-        <Button label="Ver mi Registro Vivo" variant="outline" onPress={() => router.push('/(record)')} />
-        <Button label="Listo" onPress={() => router.replace('/')} />
+        <Button
+          label="Ver mi Registro Vivo"
+          variant="outline"
+          onPress={() => router.push('/(tabs)/record')}
+        />
       </View>
     </Screen>
   );

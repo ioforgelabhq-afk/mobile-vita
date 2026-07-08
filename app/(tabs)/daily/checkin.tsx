@@ -22,7 +22,7 @@ export default function CheckinScreen() {
   }, [transcript.length]);
 
   useEffect(() => {
-    if (done) router.replace('/(daily)/result');
+    if (done) router.replace('/(tabs)/daily/result');
   }, [done, router]);
 
   if (pendingSafety) {
