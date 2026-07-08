@@ -37,7 +37,8 @@ export default function ResultScreen() {
             <InsightCard key={i.id} insight={i} onDismiss={() => void dismiss(i.id)} />
           ))}
       </ScrollView>
-      <View className="py-4">
+      <View className="py-4 gap-2">
+        <Button label="Ver mi Registro Vivo" variant="outline" onPress={() => router.push('/(record)')} />
         <Button label="Listo" onPress={() => router.replace('/')} />
       </View>
     </Screen>
