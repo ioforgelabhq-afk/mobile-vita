@@ -16,6 +16,7 @@ import type { DailyCheckinRepository } from '@/repositories/contracts/daily-chec
 import type { DailyScoreRepository } from '@/repositories/contracts/daily-score.repository';
 import type { HealthEventRepository } from '@/repositories/contracts/health-event.repository';
 import type { InsightRepository } from '@/repositories/contracts/insight.repository';
+import type { PhysicianRepository } from '@/repositories/contracts/physician.repository';
 
 import { MockAuthRepository } from '@/repositories/mock/auth.repository';
 import { MockPatientRepository } from '@/repositories/mock/patient.repository';
@@ -39,6 +40,8 @@ import {
   ApiHealthEventRepository,
   ApiInsightRepository,
 } from '@/repositories/api/daily.repositories';
+import { MockPhysicianRepository } from '@/repositories/mock/physician.repository';
+import { ApiPhysicianRepository } from '@/repositories/api/physician.repository';
 
 import { setConsentChecker } from '@/services/consent-gate';
 
@@ -70,6 +73,9 @@ const apiDailyScore = new ApiDailyScoreRepository();
 const apiHealthEvent = new ApiHealthEventRepository();
 const apiInsight = new ApiInsightRepository();
 
+const mockPhysician = new MockPhysicianRepository(stores.physicians);
+const apiPhysician = new ApiPhysicianRepository();
+
 export function authRepository(): AuthRepository {
   return getFlag('auth') === 'api' ? apiAuth : mockAuth;
 }
@@ -96,6 +102,9 @@ export function healthEventRepository(): HealthEventRepository {
 }
 export function insightRepository(): InsightRepository {
   return getFlag('insight') === 'api' ? apiInsight : mockInsight;
+}
+export function physicianRepository(): PhysicianRepository {
+  return getFlag('physician') === 'api' ? apiPhysician : mockPhysician;
 }
 
 // Wire the fail-closed consent gate to the active ConsentRepository (US2). Until a record is

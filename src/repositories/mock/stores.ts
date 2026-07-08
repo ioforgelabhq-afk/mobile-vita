@@ -15,6 +15,7 @@ import type {
   DailyScore,
   HealthEvent,
   Insight,
+  Physician,
 } from '@/repositories/contracts/schemas';
 
 export const stores = {
@@ -28,6 +29,7 @@ export const stores = {
   dailyScores: memoryStore<DailyScore>(),
   healthEvents: memoryStore<HealthEvent>(),
   insights: memoryStore<Insight>(),
+  physicians: memoryStore<Physician>(),
 };
 
 export type MockStores = typeof stores;
